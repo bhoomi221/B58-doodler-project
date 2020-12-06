@@ -3,7 +3,7 @@
 # CSCB58 Fall 2020 Assembly Final Project
 # University of Toronto, Scarborough
 #
-# Student: 
+# Student: Bhoomi Patel, 1006142158
 #
 # Bitmap Display Configuration:
 # - Unit width in pixels: 8
@@ -27,7 +27,7 @@
 # - (insert YouTube / MyMedia / other URL here).
 #
 # Any additional information that the TA needs to know:
-# - (write here, if any)
+# - E to end after loser 
 #
 #####################################################################
 
@@ -40,7 +40,8 @@
 	#Colors
 	backgroundColour: .word	0x7fe5f0 #blue
 	platformColour: .word 0xf7347a #pink
-	doodlerColour: .word 0x8a2be2 #purple
+	doodlerColour1: .word 0x8a2be2 #purple
+	doodlerColour1: .word 0x00ff00 #????
 	body: .word 0x19b092 #turquoise
 	black: .word 0x000000
 	orange: .word 0xfa9d00
@@ -58,10 +59,12 @@
 	platformPositionY: .word 60
 	platformsEasy: .word 0, 0, 0, 0, 0, 0
 	platformCounter: .word 0
+	intialized: .word 0
 
   	#Score
   	score: .word 0
 	notifThreshold: .word 5
+	notifNum: .word 0
 
   	#End
   	gameEnd: .word 0
@@ -116,7 +119,7 @@ start:
 		jal moveDown
 		jal repaint
 		jal createPlatformsEasy
-		#jal drawScore
+		jal notifications
 		j while2
 
 
@@ -162,6 +165,10 @@ drawDoodlerInitial:
 createPlatformsEasy:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
+	
+	lw $t1, intialized
+	beq $t1, 1, checkPos
+noCheck:		
 	la $t1, platformsEasy 
 	#generate random x value
 	li $v0, 42
@@ -268,13 +275,18 @@ five:
 	
 	li $a2, 5
 	sw $a2, platformCounter 
+	lw $a3, intialized 
+	li $a3, 1
 
 createdEasy:	
 	lw $ra 0($sp)
 	addi $sp, $sp, 4
 
 	jr $ra
-
+checkPos:
+	lw $t1, doodlerPositionY1
+	bge $t1, 49, createdEasy
+	j noCheck 
 ######################################################
 # Draw Platforms
 ######################################################
@@ -363,14 +375,14 @@ CheckPlatformLand:
        	j exit1
 
   	ELSE1:
+  		lw $s0, score
+ 		addi $s0, $s0, 1
+ 		sw $s0, score
+
   		li $v0, 1
 		j exit1
 
   exit1:
- 	lw $s0, score
- 	addi $s0, $s0, 1
- 	sw $s0, score
-
  	lw $ra 0($sp)
 	addi $sp, $sp, 4
 
@@ -384,7 +396,7 @@ moveUp:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 
-	li $t2, 20
+	li $t2, 14
 	li $t3, 0
 	WHILE:
 		beq $t2, $t3, return
@@ -625,6 +637,10 @@ exit2:
 # tells you you lost
 ##################################################################
 loser:
+
+	 li $v0, 1
+	 lw $a0, score 
+	 syscall
 ###############################
 #testing
 ##############################
@@ -806,13 +822,16 @@ loser:
 	restart:
 		lw $t1, 0xFFFF0004		# check to see which key has been pressed
 		beq $t1, 0x73, main # s pressed
+		beq $t1, 0x65, bye
 
 		li $a0, 250	#
 		li $v0, 32	# pause for 250 milisec
 		syscall		#
 
 		j restart  # Jump back to the top of the w
-	
+bye:
+	li $v0, 10
+	syscall	
 	
 ##################################################################
 # scroll the screen
@@ -821,8 +840,8 @@ repaint:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	
-	jal samePlatform 
-  	beq $v0, 0, exitEasy
+	lw $a2, doodlerPositionY1
+	bge $a2, 45, exitEasy
 	
 	#get platform values
 	la $a2, platformsEasy
@@ -839,7 +858,7 @@ repaint:
 	li $s2, 0
 	li $s4, 0
 downEasy:
-	beq $s0, 12, doodlerDownEasy
+	beq $s0, 10, doodlerDownEasy
 #platform 1
 	move $a0, $t3
 	add $a0, $a0, $s2
@@ -926,7 +945,7 @@ downEasy:
 	j downEasy
 
 doodlerDownEasy:
-	beq $s4, 10, exitEasy
+	beq $s4, 9, exitEasy
 
 	lw $a0, doodlerPositionX1
 	lw $a1, doodlerPositionY1
@@ -958,7 +977,6 @@ doodlerDownEasy:
 
 
 exitEasy:
-
 	lw $ra 0($sp)
 	addi $sp, $sp, 4
 	jr $ra
@@ -1384,36 +1402,119 @@ notifications:
    	
 	lw $s5, score
 	lw $s6, notifThreshold
-	beq $s5, $s6, notif
+	bge $s5, $s6, notif
 	j leave4
 	# $a0 the x coordinate
 # $a1 the y starting coordinate
 # $a2 the color
 # $a3 the y ending coordinate
 notif:
-#cool
+	lw $t0, notifNum 
+	beq $t0, 0, cool 
+	#beq $t0, 1, notbad 
+	#beq $t0, 2, udontsuck 
+	#beq $t0, 2, pog
+cool:
+#udontsuck:
+#notbad:
+#pog:
+	lw $a2, orange
 	li $a0, 7
 	li $a1, 2
-	lw $a2, black
 	li $a3, 6
 	jal DrawVerticalLine 
 	
+	li $a0, 8
+	jal DrawPoint
+	
 	li $a0, 11
 	jal DrawVerticalLine 
+	li $a0, 12
+	jal DrawPoint	
 	
 	li $a0, 13
 	jal DrawVerticalLine 
 	
 	li $a0, 16
 	jal DrawVerticalLine 
-
+	li $a0, 17
+	jal DrawPoint
+	
 	li $a0, 18
 	jal DrawVerticalLine 
-	
+
 	li $a0, 21
 	jal DrawVerticalLine 
+
+	li $a0, 8
+	li $a1, 6
+	jal DrawPoint
 	
-	addi $s6, $s6, 5
+	li $a0, 12
+	li $a1, 6
+	jal DrawPoint
+	
+	li $a0, 17
+	li $a1, 6
+	jal DrawPoint
+	
+	li $a0, 22
+	li $a1, 6
+	jal DrawPoint
+	
+	li $v0 32
+	li $a0, 500
+	syscall
+	li $v0 32
+	li $a0, 500
+	
+	lw $a2, backgroundColour
+	li $a0, 7
+	li $a1, 2
+	li $a3, 6
+	jal DrawVerticalLine 
+	
+	li $a0, 8
+	jal DrawPoint
+	
+	li $a0, 11
+	jal DrawVerticalLine 
+	li $a0, 12
+	jal DrawPoint	
+	
+	li $a0, 13
+	jal DrawVerticalLine 
+	
+	li $a0, 16
+	jal DrawVerticalLine 
+	li $a0, 17
+	jal DrawPoint
+	
+	li $a0, 18
+	jal DrawVerticalLine 
+
+	li $a0, 21
+	jal DrawVerticalLine 
+
+	li $a0, 8
+	li $a1, 6
+	jal DrawPoint
+	
+	li $a0, 12
+	li $a1, 6
+	jal DrawPoint
+	
+	li $a0, 17
+	li $a1, 6
+	jal DrawPoint
+	
+	li $a0, 22
+	li $a1, 6
+	jal DrawPoint
+	
+
+
+	addi $s6, $s6, 50
 	sw $s6, notifThreshold
 leave4:	
 	lw $ra, 0($sp)
