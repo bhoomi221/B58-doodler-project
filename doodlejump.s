@@ -41,7 +41,7 @@
 	backgroundColour: .word	0x7fe5f0 #blue
 	platformColour: .word 0xf7347a #pink
 	doodlerColour: .word 0x8a2be2 #purple
-	doodlerColour2: .word 0x00ff00 #????
+	limeGreen: .word 0x00ff00  
 	body: .word 0x19b092 #turquoise
 	black: .word 0x000000
 	orange: .word 0xfa9d00
@@ -51,19 +51,16 @@
 	#Doodler
 	doodlerPositionX1: .word 32
 	doodlerPositionY1: .word 59
-	doodlerPositionX2: .word 35
-	doodlerPositionY2: .word 59
 
 	#Platform
 	platformPositionX: .word 28
 	platformPositionY: .word 60
 	platformsEasy: .word 0, 0, 0, 0, 0, 0
 	platformCounter: .word 0
-	intialized: .word 0
 
   	#Score
   	score: .word 0
-	notifThreshold: .word 5
+	notifThreshold: .word 1
 	notifNum: .word 0
 
   	#End
@@ -84,16 +81,16 @@ main:
 	add $a0, $gp, $zero   #loop counter
 
 	jal fillBackground
-	#jal promptUser
-	#pressToStart:
-		##lw $t1, 0xFFFF0004		# check to see which key has been pressed
-		#beq $t1, 0x00000031, start # 1 pressed
-#
-		#li $a0, 250	#
-		#li $v0, 32	# pause for 250 milisec
-		#syscall		#
+	jal promptUser
+	pressToStart:
+		lw $t1, 0xFFFF0004		# check to see which key has been pressed
+		beq $t1, 0x00000031, start # 1 pressed
 
-		#j pressToStart    # Jump back to the top of the wait loop
+		li $a0, 250	#
+		li $v0, 32	# pause for 250 milisec
+		syscall		#
+
+		j pressToStart    # Jump back to the top of the wait loop
 
 start:
 	lw $a0, screenWidth
@@ -172,7 +169,9 @@ createPlatformsEasy:
 	syscall
 	#store X position
 	sw $a0, platformPositionX
+	lw $a1, 20($t1)
 	
+	bne $a1, 0, createdEasy 
 	lw $a2, platformCounter 
 	beqz $a2, zero
 	beq $a2, 1, one
@@ -364,10 +363,6 @@ CheckPlatformLand:
        	j exit1
 
   	ELSE1:
-  		lw $s0, score
- 		addi $s0, $s0, 1
- 		sw $s0, score
-
   		li $v0, 1
 		j exit1
 
@@ -481,7 +476,7 @@ moveDown:
 		j while
 	scroller:
 		jal repaint 
-		
+		jal createPlatformsEasy
 	leave:
 		jal redrawPlatforms
 		lw $ra 0($sp)
@@ -624,6 +619,158 @@ exit2:
 	addi $sp, $sp, 4
 
 	jr $ra
+##################################################################
+# scroll the screen
+##################################################################
+repaint:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	lw $a2, doodlerPositionY1
+	bge $a2, 45, exitEasy
+	
+	#get platform values
+	la $a2, platformsEasy
+
+	lw $t3, 0($a2)
+	lw $t1, 4($a2)
+	lw $t2, 8($a2)
+	lw $t9, 12($a2)
+	lw $s5, 16($a2)
+	lw $s6, 20($a2)
+
+	li $s0, 0
+	li $s1, 256
+	li $s2, 0
+	li $s4, 0
+downEasy:
+	beq $s0, 10, doodlerDownEasy
+#platform 1
+	move $a0, $t3
+	add $a0, $a0, $s2
+	lw $a1, backgroundColour
+
+	jal drawPlatform
+#platform 2
+	move $a0, $t1
+	add $a0, $a0, $s2
+	lw $a1, backgroundColour
+
+	jal drawPlatform
+#platform 3
+	move $a0, $t2
+	add $a0, $a0, $s2
+	lw $a1, backgroundColour
+
+	jal drawPlatform
+#platform 4
+	move $a0, $t9
+	add $a0, $a0, $s2
+	lw $a1, backgroundColour
+
+	jal drawPlatform
+#platform 5
+	move $a0, $s5
+	add $a0, $a0, $s2
+	lw $a1, backgroundColour
+
+	jal drawPlatform
+#platform 6
+	move $a0, $s6
+	add $a0, $a0, $s2
+	lw $a1, backgroundColour
+
+	jal drawPlatform
+
+##########Move down###################
+#platform 1
+	move $a0, $t3
+	add $a0, $a0, $s1
+
+	lw $a1, backgroundColour
+
+	jal drawPlatform
+#platform 2
+	move $a0, $t1
+	add $a0, $a0, $s1
+	lw $a1, platformColour
+	sw $a0, 0($a2)
+	jal drawPlatform
+#platform 3
+	move $a0, $t2
+	add $a0, $a0, $s1
+	lw $a1, platformColour
+	sw $a0, 4($a2)
+	jal drawPlatform
+#platform 4
+	move $a0, $t9
+	add $a0, $a0, $s1
+	lw $a1, platformColour
+	sw $a0, 8($a2)
+	jal drawPlatform
+#platform 5
+	move $a0, $s5
+	add $a0, $a0, $s1
+	lw $a1, platformColour
+	sw $a0, 12($a2)
+	jal drawPlatform
+#platform 6
+	move $a0, $s6
+	add $a0, $a0, $s1
+	lw $a1, platformColour
+	sw $a0, 16($a2)
+	jal drawPlatform
+	
+	sw $zero, 20($a2)
+
+	addi $s0, $s0, 1
+	addi $s1, $s1, 256
+	addi $s2, $s2, 256
+
+	jal sleep
+
+	j downEasy
+
+doodlerDownEasy:
+	beq $s4, 10, create
+
+	lw $a0, doodlerPositionX1
+	lw $a1, doodlerPositionY1
+
+	jal coordinateToAddress
+
+	move $a0, $v0
+	lw $a1, backgroundColour
+
+	jal drawDoodler
+
+
+	lw $t0, doodlerPositionX1
+	lw $t1, doodlerPositionY1
+	addiu $t1, $t1, 1
+	move $a0, $t0
+	move $a1, $t1
+	sw $a0, doodlerPositionX1
+	sw $a1, doodlerPositionY1
+	jal coordinateToAddress
+	move $a0, $v0
+	lw $a1, doodlerColour
+	jal drawDoodler
+
+	addi $s4, $s4, 1
+	jal inputCheck
+
+	j doodlerDownEasy
+create:
+	lw $a0, score
+	addi $a0, $a0, 1
+	sw $a0, score
+	jal createPlatformsEasy
+exitEasy:
+	lw $ra 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+
 ##################################################################
 # tells you you lost
 ##################################################################
@@ -824,172 +971,7 @@ bye:
 	li $v0, 10
 	syscall	
 	
-##################################################################
-# scroll the screen
-##################################################################
-repaint:
-	addi $sp, $sp, -4
-	sw $ra, 0($sp)
-	
-	lw $a2, doodlerPositionY1
-	bge $a2, 45, exitEasy
-	
-	#get platform values
-	la $a2, platformsEasy
 
-	lw $t3, 0($a2)
-	lw $t1, 4($a2)
-	lw $t2, 8($a2)
-	lw $t9, 12($a2)
-	lw $s5, 16($a2)
-	lw $s6, 20($a2)
-
-	li $s0, 0
-	li $s1, 256
-	li $s2, 0
-	li $s4, 0
-downEasy:
-	beq $s0, 10, doodlerDownEasy
-#platform 1
-	move $a0, $t3
-	add $a0, $a0, $s2
-	lw $a1, backgroundColour
-
-	jal drawPlatform
-#platform 2
-	move $a0, $t1
-	add $a0, $a0, $s2
-	lw $a1, backgroundColour
-
-	jal drawPlatform
-#platform 3
-	move $a0, $t2
-	add $a0, $a0, $s2
-	lw $a1, backgroundColour
-
-	jal drawPlatform
-#platform 4
-	move $a0, $t9
-	add $a0, $a0, $s2
-	lw $a1, backgroundColour
-
-	jal drawPlatform
-#platform 5
-	move $a0, $s5
-	add $a0, $a0, $s2
-	lw $a1, backgroundColour
-
-	jal drawPlatform
-#platform 6
-	move $a0, $s6
-	add $a0, $a0, $s2
-	lw $a1, backgroundColour
-
-	jal drawPlatform
-
-##########Move down###################
-#platform 1
-	move $a0, $t3
-	add $a0, $a0, $s1
-
-	lw $a1, backgroundColour
-
-	jal drawPlatform
-#platform 2
-	move $a0, $t1
-	add $a0, $a0, $s1
-	lw $a1, platformColour
-	sw $a0, 0($a2)
-	jal drawPlatform
-#platform 3
-	move $a0, $t2
-	add $a0, $a0, $s1
-	lw $a1, platformColour
-	sw $a0, 4($a2)
-	jal drawPlatform
-#platform 4
-	move $a0, $t9
-	add $a0, $a0, $s1
-	lw $a1, platformColour
-	sw $a0, 8($a2)
-	jal drawPlatform
-#platform 5
-	move $a0, $s5
-	add $a0, $a0, $s1
-	lw $a1, platformColour
-	sw $a0, 12($a2)
-	jal drawPlatform
-#platform 6
-	move $a0, $s6
-	add $a0, $a0, $s1
-	lw $a1, platformColour
-	sw $a0, 16($a2)
-	jal drawPlatform
-
-
-	addi $s0, $s0, 1
-	addi $s1, $s1, 256
-	addi $s2, $s2, 256
-
-	jal sleep
-
-	j downEasy
-
-doodlerDownEasy:
-	beq $s4, 9, create
-
-	lw $a0, doodlerPositionX1
-	lw $a1, doodlerPositionY1
-
-	jal coordinateToAddress
-
-	move $a0, $v0
-	lw $a1, backgroundColour
-
-	jal drawDoodler
-
-
-	lw $t0, doodlerPositionX1
-	lw $t1, doodlerPositionY1
-	addiu $t1, $t1, 1
-	move $a0, $t0
-	move $a1, $t1
-	sw $a0, doodlerPositionX1
-	sw $a1, doodlerPositionY1
-	jal coordinateToAddress
-	move $a0, $v0
-	lw $a1, doodlerColour
-	jal drawDoodler
-
-	addi $s4, $s4, 1
-	jal inputCheck
-
-	j doodlerDownEasy
-create:
-	jal createPlatformsEasy
-
-exitEasy:
-	lw $ra 0($sp)
-	addi $sp, $sp, 4
-	jr $ra
-##################################################################
-# check if landed on the same platform
-# 1- different
-# 0- same
-##################################################################
-samePlatform:
-	addi $sp, $sp, -4
-	sw $ra, 0($sp)
-	#if it lands on the same platform again dont scroll
-	#if(next == prev) 
-	#then dont scroll or create 
-	# prev is the one you left 
-	#next the one your on
-	# how do you know which one you're on adn which one you left 
-
-	lw $ra 0($sp)
-	addi $sp, $sp, 4
-	jr $ra
 ##################################################################
 # Draw score
 #################################################################
@@ -1384,8 +1366,9 @@ redrawPlatforms:
 	lw $a0, 16($s1)
 	jal drawPlatform
 	lw $a0, 20($s1)
+	beq $a0, $zero, exit6
 	jal drawPlatform
-
+exit6:
 	lw $ra, 0($sp)
    	addi $sp, $sp, 4
 
@@ -1408,13 +1391,11 @@ notifications:
 notif:
 	lw $t0, notifNum 
 	beq $t0, 0, cool 
-	#beq $t0, 1, notbad 
+	beq $t0, 1, notbad 
 	#beq $t0, 2, udontsuck 
 	#beq $t0, 2, pog
 cool:
-#udontsuck:
-#notbad:
-#pog:
+
 	lw $a2, orange
 	li $a0, 7
 	li $a1, 2
@@ -1509,12 +1490,149 @@ cool:
 	li $a1, 6
 	jal DrawPoint
 	
+	addi $t0, $t0, 1
+	sw $t0, notifNum 
+notbad:
+	lw $a2, orange
+	li $a0, 7
+	li $a1, 2
+	li $a3, 28
+	jal DrawHorizontalLine 
+	li $a0, 10
+	lw $a2, backgroundColour
+	jal DrawPoint
+	li $a0, 14
+	jal DrawPoint
+	li $a0, 18
+	jal DrawPoint
+	li $a0, 22
+	jal DrawPoint
+	li $a0, 26
+	jal DrawPoint
+	
+	lw $a2, orange
+	li $a0, 7
+	li $a1, 2
+	li $a3, 6
+	jal DrawVerticalLine 
+	li $a0, 9
+	jal DrawVerticalLine 
+	li $a0, 11
+	jal DrawVerticalLine 
+	li $a0, 13
+	jal DrawVerticalLine 
+	li $a0, 16
+	jal DrawVerticalLine 
+	li $a0, 19
+	jal DrawVerticalLine
+	li $a0, 21
+	jal DrawVerticalLine 
+	li $a0, 23
+	jal DrawVerticalLine 
+	li $a0, 25
+	jal DrawVerticalLine  
+	li $a0, 27
+	jal DrawVerticalLine 
+	
+	lw $a2, orange
+	li $a0, 29
+	li $a1, 3
+	li $a3, 5
+	jal DrawVerticalLine 
+	
+	lw $a2, orange
+	li $a0, 19
+	li $a1, 4
+	li $a3, 24
+	jal DrawHorizontalLine
+	li $a0, 22 
+	lw $a2, backgroundColour
+	jal DrawPoint
+	li $a1, 6
+	lw $a2, orange
+	jal DrawPoint
+	
+	li $a0, 12
+	li $a1, 6
+	jal DrawPoint
+	li $a0, 28
+	jal DrawPoint
+	li $a1, 2
+	jal DrawPoint
+	
+	li $v0 32
+	li $a0, 500
+	syscall
+	li $v0 32
+	li $a0, 500
+	
+	lw $a2, backgroundColour
+	li $a0, 7
+	li $a1, 2
+	li $a3, 28
+	jal DrawHorizontalLine 
+	li $a0, 10
+
+	
+	lw $a2, backgroundColour
+	li $a0, 7
+	li $a1, 2
+	li $a3, 6
+	jal DrawVerticalLine 
+	li $a0, 9
+	jal DrawVerticalLine 
+	li $a0, 11
+	jal DrawVerticalLine 
+	li $a0, 13
+	jal DrawVerticalLine 
+	li $a0, 16
+	jal DrawVerticalLine 
+	li $a0, 19
+	jal DrawVerticalLine
+	li $a0, 21
+	jal DrawVerticalLine 
+	li $a0, 23
+	jal DrawVerticalLine 
+	li $a0, 25
+	jal DrawVerticalLine  
+	li $a0, 27
+	jal DrawVerticalLine 
+	
+	lw $a2, backgroundColour
+	li $a0, 29
+	li $a1, 3
+	li $a3, 5
+	jal DrawVerticalLine 
+	
+	lw $a2, backgroundColour
+	li $a0, 19
+	li $a1, 4
+	li $a3, 24
+	jal DrawHorizontalLine
+	li $a1, 6
+	lw $a2, backgroundColour
+	jal DrawPoint
+	
+	li $a0, 12
+	li $a1, 6
+	jal DrawPoint
+	li $a0, 28
+	jal DrawPoint
+	li $a1, 2
+	jal DrawPoint
+	
+	addi $t0, $t0, 1
+	sw $t0, notifNum 
+				
+#udontsuck:
+#pog:	
 
 
 	
 leave4:	
-	addi $s6, $s6, 50
+	addi $s6, $s6, 5
 	sw $s6, notifThreshold
+	
 	
 	lw $ra, 0($sp)
    	addi $sp, $sp, 4
