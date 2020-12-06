@@ -19,7 +19,7 @@
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
 # 1. nicer graphics 
-# 2. (fill in the feature, if any)
+# 2. dynamic notifcations
 # 3. (fill in the feature, if any)
 # ... (add more if necessary)
 #
@@ -27,7 +27,7 @@
 # - (insert YouTube / MyMedia / other URL here).
 #
 # Any additional information that the TA needs to know:
-# - E to end after loser 
+# - E to end after lost game
 #
 #####################################################################
 
@@ -40,8 +40,8 @@
 	#Colors
 	backgroundColour: .word	0x7fe5f0 #blue
 	platformColour: .word 0xf7347a #pink
-	doodlerColour1: .word 0x8a2be2 #purple
-	doodlerColour1: .word 0x00ff00 #????
+	doodlerColour: .word 0x8a2be2 #purple
+	doodlerColour2: .word 0x00ff00 #????
 	body: .word 0x19b092 #turquoise
 	black: .word 0x000000
 	orange: .word 0xfa9d00
@@ -117,8 +117,6 @@ start:
 	while2:
 		jal moveUp
 		jal moveDown
-		jal repaint
-		jal createPlatformsEasy
 		jal notifications
 		j while2
 
@@ -165,10 +163,7 @@ drawDoodlerInitial:
 createPlatformsEasy:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
-	
-	lw $t1, intialized
-	beq $t1, 1, checkPos
-noCheck:		
+		
 	la $t1, platformsEasy 
 	#generate random x value
 	li $v0, 42
@@ -275,18 +270,12 @@ five:
 	
 	li $a2, 5
 	sw $a2, platformCounter 
-	lw $a3, intialized 
-	li $a3, 1
-
+	
 createdEasy:	
 	lw $ra 0($sp)
 	addi $sp, $sp, 4
 
 	jr $ra
-checkPos:
-	lw $t1, doodlerPositionY1
-	bge $t1, 49, createdEasy
-	j noCheck 
 ######################################################
 # Draw Platforms
 ######################################################
@@ -460,7 +449,7 @@ moveDown:
 		beq $t1, 1, loser
 		jal CheckPlatformLand
 		move $t1, $v0
-    	 	beq $t1, 1, leave
+    	 	beq $t1, 1, scroller
 		lw $a0, doodlerPositionX1
 		lw $a1, doodlerPositionY1
 
@@ -490,6 +479,8 @@ moveDown:
     		jal inputCheck
     		
 		j while
+	scroller:
+		jal repaint 
 		
 	leave:
 		jal redrawPlatforms
@@ -945,7 +936,7 @@ downEasy:
 	j downEasy
 
 doodlerDownEasy:
-	beq $s4, 9, exitEasy
+	beq $s4, 9, create
 
 	lw $a0, doodlerPositionX1
 	lw $a1, doodlerPositionY1
@@ -974,7 +965,8 @@ doodlerDownEasy:
 	jal inputCheck
 
 	j doodlerDownEasy
-
+create:
+	jal createPlatformsEasy
 
 exitEasy:
 	lw $ra 0($sp)
@@ -989,6 +981,11 @@ samePlatform:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	#if it lands on the same platform again dont scroll
+	#if(next == prev) 
+	#then dont scroll or create 
+	# prev is the one you left 
+	#next the one your on
+	# how do you know which one you're on adn which one you left 
 
 	lw $ra 0($sp)
 	addi $sp, $sp, 4
@@ -1514,9 +1511,11 @@ cool:
 	
 
 
+	
+leave4:	
 	addi $s6, $s6, 50
 	sw $s6, notifThreshold
-leave4:	
+	
 	lw $ra, 0($sp)
    	addi $sp, $sp, 4
    	
