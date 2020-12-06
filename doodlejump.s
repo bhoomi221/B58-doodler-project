@@ -3,7 +3,7 @@
 # CSCB58 Fall 2020 Assembly Final Project
 # University of Toronto, Scarborough
 #
-# Student: Bhoomi Patel, 1006142158
+# Student: 
 #
 # Bitmap Display Configuration:
 # - Unit width in pixels: 8
